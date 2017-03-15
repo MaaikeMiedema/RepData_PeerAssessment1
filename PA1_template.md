@@ -1,11 +1,6 @@
----
-title: "Reproducible Research: Peer-graded Assignment 1"
-author: "Maaike Miedema"
-date: "March 15, 2017"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer-graded Assignment 1
+Maaike Miedema  
+March 15, 2017  
 
 
 ## Introduction
@@ -29,7 +24,8 @@ individual and includes:
 
 ## Packages used
 The following pakages have been used: dplyr, ggplot2. They are loaded by:
-```{r, message = FALSE}
+
+```r
 library(dplyr)
 library(ggplot2)
 ```
@@ -40,7 +36,8 @@ library(ggplot2)
 Requirement: the data file activity.zip is available in the working directory.
 The data is loaded by:
 
-```{r}
+
+```r
 unzip(zipfile="activity.zip")
 AMData<- read.csv("activity.csv")
 ```
@@ -48,8 +45,16 @@ AMData<- read.csv("activity.csv")
 
 #### A quick look at the data
 
-```{r}
+
+```r
 str(AMData)
+```
+
+```
+## 'data.frame':	17568 obs. of  3 variables:
+##  $ steps   : int  NA NA NA NA NA NA NA NA NA NA ...
+##  $ date    : Factor w/ 61 levels "2012-10-01","2012-10-02",..: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ interval: int  0 5 10 15 20 25 30 35 40 45 ...
 ```
 **Note: ** 
 
@@ -60,8 +65,13 @@ str(AMData)
 no effect on the interval series
 
 Have a closer look at the interval values
-```{r}
+
+```r
 with(AMData,c(min(steps,na.rm = TRUE), max(steps,na.rm = TRUE)))
+```
+
+```
+## [1]   0 806
 ```
 So, the minimum number of steps is zero, the maximum number is 806, which is 
 reasonable, about 2.5-3 steps/second. 
@@ -69,8 +79,13 @@ reasonable, about 2.5-3 steps/second.
 According to https://www.timeanddate.com/time/change/usa?year=2012 Daylight 
 Saving Time ended November 4, 2012 at 2.00 am.  All "steps" observations( 288=24x12) 
 on November 4 are missing:
-```{r}
+
+```r
 sum(is.na(filter(AMData,date=="2012-11-04")))
+```
+
+```
+## [1] 288
 ```
 
 <br /> 
@@ -79,7 +94,8 @@ sum(is.na(filter(AMData,date=="2012-11-04")))
 As the interval concerns time, the class of variable date is changed from factor 
 to Date. 
 
-```{r}
+
+```r
 AMData$date <- as.Date(AMData$date)
 ```
 
@@ -87,7 +103,8 @@ AMData$date <- as.Date(AMData$date)
 The total number of steps per day is calculated and plotted in a histogram. 
 Missing values are ignored.
 
-```{r}
+
+```r
 stepsTotal <- summarize(group_by(AMData, date), sum(steps))
 colnames(stepsTotal) <- c("date","dailyTotal")
 ggplot(data = stepsTotal, aes(x=dailyTotal)) +
@@ -103,12 +120,26 @@ ggplot(data = stepsTotal, aes(x=dailyTotal)) +
                            limits =c(0,20)) 
 ```
 
+![](PA1_template_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
+
 Note that the difference between mean and median of the daily total number of 
 steps is very small: 
 
-```{r}
+
+```r
 mean(stepsTotal$dailyTotal, na.rm = TRUE)
+```
+
+```
+## [1] 10766.19
+```
+
+```r
 median(stepsTotal$dailyTotal, na.rm = TRUE)
+```
+
+```
+## [1] 10765
 ```
 
 
@@ -125,7 +156,8 @@ versus their intervals is created by the code below.
   to do this because the time is cyclic. 
   This workaround is because I couldn't manage to set the x-axis boundaries another way.
   
-```{r}
+
+```r
 intervalMean<- summarize(group_by(AMData, interval), mean(steps, na.rm = TRUE))
 colnames(intervalMean)<-c("interval", "meanSteps")
 intervalMean<-rbind(intervalMean,intervalMean[1,]) 
@@ -138,13 +170,20 @@ ggplot(data = intervalMean, aes(x = as.factor(interval),y=meanSteps, group=1)) +
                          labels = 0:24) +
         scale_y_continuous(name = "Average Number of Steps in 5 min period")
 ```
+
+![](PA1_template_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
   
 
 **Interval with the maximum number of steps** is 835 as calculated with the 
 code below. On average most steps are taken between 8.30 and 8.35 am. 
 
-```{r}
+
+```r
 filter(intervalMean, meanSteps == max(meanSteps))$interval
+```
+
+```
+## [1] 835
 ```
 
 
@@ -156,21 +195,42 @@ daily number of steps will be repeated.
 #### Missing values
 To get an impression on how much values are missing the number of missing values 
 is calculated. 
-```{r}
+
+```r
 with(AMData,sum(is.na(steps)))
+```
+
+```
+## [1] 2304
 ```
 So, the total number of missing values is 2304, about 13% of the observations. 
 It appears that 8 whole days are missing: 
-```{r}
+
+```r
 missing<-filter(AMData,is.na(steps))
 summarize(group_by(missing, date), n())
+```
+
+```
+## # A tibble: 8 × 2
+##         date `n()`
+##       <date> <int>
+## 1 2012-10-01   288
+## 2 2012-10-08   288
+## 3 2012-11-01   288
+## 4 2012-11-04   288
+## 5 2012-11-09   288
+## 6 2012-11-10   288
+## 7 2012-11-14   288
+## 8 2012-11-30   288
 ```
 #### Replacing missing values
 I've chosen to replace a missing value by the mean value of steps for a given 
 interval. Those are stored in the data frame "intervalMean".
 with this choice differences between the various days in the week are ignored. 
 The new data frame is called ReplacedNAs
-```{r}
+
+```r
 ReplacedNAs<- merge(AMData, intervalMean)
 ReplacedNAs <- select(ReplacedNAs,steps, date, interval, meanSteps)
 ReplacedNAs <- arrange(ReplacedNAs, date)
@@ -180,7 +240,8 @@ ReplacedNAs[NAs,]$steps<-ReplacedNAs[NAs,]$meanSteps
 
 With this new data set ReplacedNAs a new histogram is plotted, the same way as before:
 
-```{r}
+
+```r
 stepsTotalNA <- summarize(group_by(ReplacedNAs, date), sum(steps))
 colnames(stepsTotalNA) <- c("date","dailyTotal")
 ggplot(data = stepsTotalNA, aes(x=dailyTotal)) +
@@ -196,12 +257,26 @@ ggplot(data = stepsTotalNA, aes(x=dailyTotal)) +
                            limits =c(0,30)) 
 ```
 
+![](PA1_template_files/figure-html/unnamed-chunk-14-1.png)<!-- -->
+
 Finally is checked what happens tot the mean and median by replacing NAs by average numbers.
 
  
-```{r}
+
+```r
 mean(stepsTotalNA$dailyTotal, na.rm = TRUE)
+```
+
+```
+## [1] 10766.19
+```
+
+```r
 median(stepsTotalNA$dailyTotal, na.rm = TRUE)
+```
+
+```
+## [1] 10766.19
 ```
   
   
@@ -220,7 +295,8 @@ and "weekend". The function "strftime()" is used to convert dates to weekdays,
 because it is not locale-specific; strftime(date, %u) returns 
 a character "1".."7", with Monday="1"
 
-```{r}
+
+```r
 days <- c(rep("weekday",5), rep("weekend",2))
 ReplacedNAs$dayType <- days[as.integer(strftime(ReplacedNAs$date,"%u"))]
 ```
@@ -230,7 +306,8 @@ weekdays differs from weekends. The plotting code is rather similar to the first
 plot of the Daily Activity Pattern only facet_wrap is used to get the labeling on top 
 of the plots 
 
-```{r}
+
+```r
 intervalMean2 <- summarize(group_by(ReplacedNAs, interval, dayType), mean(steps))
 colnames(intervalMean2) <- c("interval", "dayType", "meanSteps")
 intervalMean2 <- rbind(intervalMean2,intervalMean2[1:2,]) 
@@ -246,6 +323,8 @@ ggplot(data = intervalMean2,
                          labels = 0:24) +
         scale_y_continuous(name = "Average Number of Steps in 5 min period")
 ```
+
+![](PA1_template_files/figure-html/unnamed-chunk-17-1.png)<!-- -->
 
 Conclusion: in the weekends the person gets up later, is less active until about 
 10 am, during the rest of the day he/she takes more steps.
